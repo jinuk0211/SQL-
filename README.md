@@ -470,6 +470,38 @@ class Reasoner(ABC, Generic[State, Action, Example]):
         return self.search_algo(self.world_model, self.search_config, **kwargs)
 ```
 ```python
+from reasoners import WorldModel, LanguageModel, SearchConfig
+from typing import NamedTuple
+import sqlparse
+import requests
+import re
+AgentAction = str
+
+CLAUSE_KEYWORDS = ['select', 'from', 'where', 'group by', 'having', 'order by', 'limit', 'intersect', 'union', 'except', 'union all']
+JOIN_KEYWORDS = ['join', 'on', 'as', 'right join', 'inner join', 'left join']
+OTHER_KEYWORDS = ['distinct']
+BIRD_KEYWORDS = ['if', 'else', 'datediff', 'over', 'instr', 'case', 'partition by', 'iif', 'float', 'real', 'when', 'int', 'using', 'timestampdiff', 'then', 'substr', 'cast', 'integer', 'strftime', 'end']
+WHERE_OPS = ['not', 'between', 'in', 'like', 'is', 'exists', 'not null', 'null']
+AGG_OPS = ['max', 'min', 'count', 'sum', 'avg']
+COND_OPS = ['and', 'or']
+ORDER_OPS = ['desc', 'asc']
+SQL_KEYWORDS = []
+SQL_KEYWORDS.extend(CLAUSE_KEYWORDS)
+SQL_KEYWORDS.extend(JOIN_KEYWORDS)
+SQL_KEYWORDS.extend(OTHER_KEYWORDS)
+SQL_KEYWORDS.extend(BIRD_KEYWORDS)
+SQL_KEYWORDS.extend(WHERE_OPS)
+SQL_KEYWORDS.extend(AGG_OPS)
+SQL_KEYWORDS.extend(COND_OPS)
+SQL_KEYWORDS.extend(ORDER_OPS)
+SQL_KEYWORDS = [i.upper() for i in SQL_KEYWORDS]
+
+class AgentState(NamedTuple):
+    step_idx: int
+    last_blocks_state: str
+    blocks_state: str
+    buffered_action: AgentAction
+
 class AgentWorldModel(WorldModel):
     def __init__(self,
                  base_model: LanguageModel,
