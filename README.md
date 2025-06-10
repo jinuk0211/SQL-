@@ -492,7 +492,25 @@ class LanguageModel(ABC):
         :param contents: The contents to evaluate (must include the prefix).
         """
         ...
+#------------------
+    def _expand(self, node: MCTSNode):
+             
+        if node.state is None:
+            node.state = self.world_model.step(node.parent.state, node.action)
+            # reward is calculated after the state is updated, so that the
+            # information can be cached and passed from the world model
+            # to the reward function with **aux without repetitive computation
+            node.reward, node.reward_details = self.search_config. \
+                reward(node.parent.state, node.action, **node.fast_reward_details)
+            node.is_terminal = self.world_model.is_terminal(node.state)
 
+        if node.is_terminal:
+            return
+
+        # print(f'Step {node.state.step_idx + 1}: ')
+        children = []
+        actions = self.search_config.get_actions(node.state)
+#-------------------------
 
 class WorldModel(ABC, Generic[State, Action, Example]):
     def __init__(self) -> None:
