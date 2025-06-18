@@ -235,60 +235,104 @@ def probability_subanswer_question(ori_query, answer, ans_weight=0.75):
 #   value = probability_select(user_question, subquestion, answer)
 #   print(value)
 
-def llm_proposal(model=None,tokenizer=None,prompt=None,model_name='qwen'):
-    if model_name =='qwen':
-        messages = [ {"role": "system", "content": "You are Qwen, created by Alibaba Cloud. You are a helpful assistant."},
-            {"role": "user", "content": prompt}]
-        text = tokenizer.apply_chat_template(
-            messages, tokenize=False,
-            add_generation_prompt=True)
+import logging
+from typing import List, Dict
+from difflib import SequenceMatcher
 
-        model_inputs = tokenizer([text], return_tensors="pt").to(model.device)
+logger = logging.getLogger(__name__)
 
-        generated_ids = model.generate(
-            **model_inputs, max_new_tokens=512)
+class AdvancedSelfConsistency:
+    def __init__(self, client, model: str,  num_samples: int = 5, similarity_threshold: float = 0.8):
+        self.client = client
+        self.model = model
+        self.num_samples = num_samples
+        self.similarity_threshold = similarity_threshold
+        self.self_consistency_completion_tokens = 0
 
-        generated_ids = [
-            output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)]
+    def generate_responses(self, system_prompt: str, user_prompt: str) -> List[str]:
+        responses = []
+        for _ in range(self.num_samples):
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=1,
+                max_tokens=4096
+            )
+            self.self_consistency_completion_tokens += response.usage.completion_tokens
+            responses.append(response.choices[0].message.content)
+        return responses
 
-        response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
-        return response
-    if model_name == 'gpt':
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.0,
-        )
+    def calculate_similarity(self, a: str, b: str) -> float:
+        return SequenceMatcher(None, a, b).ratio()
 
-    # elif model_name == 'llama':
+    def cluster_similar_responses(self, responses: List[str]) -> List[List[str]]:
+        clusters = []
+        for response in responses:
+            added_to_cluster = False
+            for cluster in clusters:
+                if self.calculate_similarity(response, cluster[0]) >= self.similarity_threshold:
+                    cluster.append(response)
+                    added_to_cluster = True
+                    break
+            if not added_to_cluster:
+                clusters.append([response])
+        return clusters
 
-    #     image = Image.open(img_path)
+    def aggregate_results(self, responses: List[str]) -> Dict[str, any]:
+        final_answers = responses
+        clusters = self.cluster_similar_responses(final_answers)
+        
+        cluster_info = []
+        for cluster in clusters:
+            cluster_info.append({
+                "answer": cluster[0],
+                "frequency": len(cluster),
+                "variants": cluster
+            })
+        
+        cluster_info.sort(key=lambda x: x['frequency'], reverse=True)
+        
+        return {
+            "clusters": cluster_info,
+            "total_responses": len(responses),
+            "num_unique_clusters": len(clusters)
+        }
 
-    #     messages = [
-    #         {"role": "user", "content": [
-    #             {"type": "image"},{"type": "text","text": f"{prompt}"}]}
-    #             ]
-    #     input_text = processor.apply_chat_template(messages, add_generation_prompt=True)
-    #     inputs = processor(
-    #         image,
-    #         input_text,
-    #         add_special_tokens=False,
-    #         return_tensors="pt"
-    #     ).to(model.device)
+    def evaluate(self, system_prompt: str, user_prompt: str) -> Dict[str, any]:
+        responses = self.generate_responses(system_prompt, user_prompt)
+        aggregated_result = self.aggregate_results(responses)
+        
+        return {
+            "individual_responses": responses,
+            "aggregated_result": aggregated_result
+        }
 
-    #     output = model.generate(**inputs, max_new_tokens=512)
-    #     output_text = processor.decode(output[0])
-    #     split_text = output_text.split("<|end_header_id|>", 2)  # 理쒕? 2踰덈쭔 遺꾪븷
+def advanced_self_consistency_approach(system_prompt: str, initial_query: str, client, model: str) -> str:
+    self_consistency = AdvancedSelfConsistency(client, model)
+    result = self_consistency.evaluate(system_prompt, initial_query)
+    
+    logger.info("Advanced Self-Consistency Results:")
+    logger.info(f"Total responses: {result['aggregated_result']['total_responses']}")
+    logger.info(f"Number of unique clusters: {result['aggregated_result']['num_unique_clusters']}")
+    for i, cluster in enumerate(result['aggregated_result']['clusters'], 1):
+        logger.debug(f"\nCluster {i}:")
+        logger.debug(f"  Representative answer: {cluster['answer']}")
+        logger.debug(f"  Frequency: {cluster['frequency']}")
+        logger.debug(f"  Variants: {cluster['variants']}")
+    
+    if result['aggregated_result']['clusters']:
+        return result['aggregated_result']['clusters'][0]['answer'], self_consistency.self_consistency_completion_tokens
+    else:
+        return "No consistent answer found.", self_consistency.self_consistency_completion_tokens
 
-    #     # ??踰덉㎏ "<|end_header_id|>" ?댄썑 遺遺?媛?몄삤湲?(?덈떎硫?
-    #     cleaned_text = split_text[2].strip()
-    #     cleaned_text = cleaned_text.replace("<|eot_id|>", "")
-    #     # print('get_proposal:理쒖쥌 ?띿뒪??')
-    #     # print(cleaned_text)
-    #     return cleaned_text
 
-    #     # ?렞 異쒕젰 寃곌낵
-    #     reply = response['choices'][0]['message']['content'].strip()
-    #     return reply
+# https://github.com/RyanLiu112/compute-optimal-tts/blob/main/src/reason/reranking/vote_utils.py
+def _agg_majority_vote(x_list: List[str], unused_v_list: List[float], return_reward=False):
+    counts = Counter(x_list)
+    most_common = max(counts, key=counts.get)
+    if return_reward:
+        return most_common, [0.0]
+    return most_common

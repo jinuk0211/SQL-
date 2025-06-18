@@ -82,3 +82,61 @@ generated_ids = [
 ]
 
 response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
+
+def llm_proposal(model=None,tokenizer=None,prompt=None,model_name='qwen'):
+    if model_name =='qwen':
+        messages = [ {"role": "system", "content": "You are Qwen, created by Alibaba Cloud. You are a helpful assistant."},
+            {"role": "user", "content": prompt}]
+        text = tokenizer.apply_chat_template(
+            messages, tokenize=False,
+            add_generation_prompt=True)
+
+        model_inputs = tokenizer([text], return_tensors="pt").to(model.device)
+
+        generated_ids = model.generate(
+            **model_inputs, max_new_tokens=512)
+
+        generated_ids = [
+            output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)]
+
+        response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
+        return response
+    if model_name == 'gpt':
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.0,
+        )
+
+    # elif model_name == 'llama':
+
+    #     image = Image.open(img_path)
+
+    #     messages = [
+    #         {"role": "user", "content": [
+    #             {"type": "image"},{"type": "text","text": f"{prompt}"}]}
+    #             ]
+    #     input_text = processor.apply_chat_template(messages, add_generation_prompt=True)
+    #     inputs = processor(
+    #         image,
+    #         input_text,
+    #         add_special_tokens=False,
+    #         return_tensors="pt"
+    #     ).to(model.device)
+
+    #     output = model.generate(**inputs, max_new_tokens=512)
+    #     output_text = processor.decode(output[0])
+    #     split_text = output_text.split("<|end_header_id|>", 2)  # 理쒕? 2踰덈쭔 遺꾪븷
+
+    #     # ??踰덉㎏ "<|end_header_id|>" ?댄썑 遺遺?媛?몄삤湲?(?덈떎硫?
+    #     cleaned_text = split_text[2].strip()
+    #     cleaned_text = cleaned_text.replace("<|eot_id|>", "")
+    #     # print('get_proposal:理쒖쥌 ?띿뒪??')
+    #     # print(cleaned_text)
+    #     return cleaned_text
+
+    #     # ?렞 異쒕젰 寃곌낵
+    #     reply = response['choices'][0]['message']['content'].strip()
+    #     return reply
