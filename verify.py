@@ -240,7 +240,7 @@ from typing import List, Dict
 from difflib import SequenceMatcher
 
 logger = logging.getLogger(__name__)
-
+# value = mcts_task.get_step_value(child.y)
 class AdvancedSelfConsistency:
     def __init__(self, client, model: str,  num_samples: int = 5, similarity_threshold: float = 0.8):
         self.client = client
@@ -270,9 +270,9 @@ class AdvancedSelfConsistency:
 
     def cluster_similar_responses(self, responses: List[str]) -> List[List[str]]:
         clusters = []
-        for response in responses:
+        for response in responses:  
             added_to_cluster = False
-            for cluster in clusters:
+            for cluster in clusters:  
                 if self.calculate_similarity(response, cluster[0]) >= self.similarity_threshold:
                     cluster.append(response)
                     added_to_cluster = True
@@ -280,6 +280,35 @@ class AdvancedSelfConsistency:
             if not added_to_cluster:
                 clusters.append([response])
         return clusters
+
+rc = AdvancedSelfConsistency(similarity_threshold=0.9)
+responses = ['cat','dog','dog','lion','dog','dog lion cat','springclustering','springclusterin','dog','spring']
+print(rc.consistency_scores(responses))
+[0.1, 0.4, 0.4, 0.1, 0.4, 0.1, 0.2, 0.2, 0.4, 0.1]
+
+    def consistency_scores(self, responses: List[str]) -> List[float]:
+        n = len(responses)
+        clusters = []
+        response_to_cluster = {}
+
+        for i, response in enumerate(responses):  
+            added_to_cluster = False
+            for cluster_id, cluster in enumerate(clusters):
+                if self.calculate_similarity(response, cluster[0]) >= self.similarity_threshold:
+                    cluster.append(response)
+                    response_to_cluster[i] = cluster_id
+                    added_to_cluster = True
+                    break
+            if not added_to_cluster:
+                clusters.append([response])
+                response_to_cluster[i] = len(clusters) - 1
+
+        # Map cluster sizes
+        cluster_sizes = [len(c) for c in clusters]
+
+        # Assign consistency score = cluster size / total
+        scores = [cluster_sizes[response_to_cluster[i]] / n for i in range(n)]
+        return scores
 
     def aggregate_results(self, responses: List[str]) -> Dict[str, any]:
         final_answers = responses
@@ -328,7 +357,7 @@ def advanced_self_consistency_approach(system_prompt: str, initial_query: str, c
     else:
         return "No consistent answer found.", self_consistency.self_consistency_completion_tokens
 
-
+# value = mcts_task.get_step_value(child.y)
 # https://github.com/RyanLiu112/compute-optimal-tts/blob/main/src/reason/reranking/vote_utils.py
 def _agg_majority_vote(x_list: List[str], unused_v_list: List[float], return_reward=False):
     counts = Counter(x_list)
@@ -336,3 +365,6 @@ def _agg_majority_vote(x_list: List[str], unused_v_list: List[float], return_rew
     if return_reward:
         return most_common, [0.0]
     return most_common
+
+def get_step_value(self, actions):
+
