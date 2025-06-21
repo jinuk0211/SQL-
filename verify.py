@@ -281,10 +281,10 @@ class AdvancedSelfConsistency:
                 clusters.append([response])
         return clusters
 
-rc = AdvancedSelfConsistency(similarity_threshold=0.9)
-responses = ['cat','dog','dog','lion','dog','dog lion cat','springclustering','springclusterin','dog','spring']
-print(rc.consistency_scores(responses))
-[0.1, 0.4, 0.4, 0.1, 0.4, 0.1, 0.2, 0.2, 0.4, 0.1]
+# rc = AdvancedSelfConsistency(similarity_threshold=0.9)
+# responses = ['cat','dog','dog','lion','dog','dog lion cat','springclustering','springclusterin','dog','spring']
+# print(rc.consistency_scores(responses))
+# [0.1, 0.4, 0.4, 0.1, 0.4, 0.1, 0.2, 0.2, 0.4, 0.1]
 
     def consistency_scores(self, responses: List[str]) -> List[float]:
         n = len(responses)
@@ -366,5 +366,5 @@ def _agg_majority_vote(x_list: List[str], unused_v_list: List[float], return_rew
         return most_common, [0.0]
     return most_common
 
-def get_step_value(self, actions):
+# def get_step_value(self, actions):
 

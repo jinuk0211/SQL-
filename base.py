@@ -190,7 +190,30 @@ class AgentConfig(SearchConfig):
         #     print(sql_exp, sql_tokens)
         return sql_lower
 
-    def segment_step(self, sql_completion):
+    # def segment_step(self, sql_completion):
+    #     try:
+    #         parse = sqlparse.parse(sql_completion)
+    #         sql = parse[0]
+    #     except Exception as e:
+    #         return ""
+    #     flat_tokens = sql.flatten()
+    #     sql_tokens = [
+    #         (token.value.upper() if token.value in SQL_KEYWORDS else token.value)
+    #         for token in flat_tokens
+    #     ]
+
+    #     step_length = 0
+    #     for i, token in enumerate(sql_tokens[1:]):
+    #         if token.lower() in CLAUSE_KEYWORDS:
+    #             step_length = i + 1
+    #             break
+
+    #     if step_length == 0:
+    #         # No more clauses, the entire completion is a step
+    #         return sql_completion
+    #     else:
+    #         return "".join(sql_tokens[:step_length])
+    def segment_step(sql_completion):
         try:
             parse = sqlparse.parse(sql_completion)
             sql = parse[0]
@@ -203,37 +226,31 @@ class AgentConfig(SearchConfig):
         ]
 
         step_length = 0
+        clause_count = 0
         for i, token in enumerate(sql_tokens[1:]):
             if token.lower() in CLAUSE_KEYWORDS:
-                step_length = i + 1
+                print(token.lower())
+                clause_count += 1
+                if clause_count == 2:
+                    step_length = i + 1
                 break
 
-        if step_length == 0:
+        if clause_count == 0:
+            print('clause 0개 감지')
             # No more clauses, the entire completion is a step
+            print(sql_completion)
+            return sql_completion
+        elif clause_count == 1:
+            print('clause 1개 감지')
+            print(sql_completion)
             return sql_completion
         else:
+            print('clause 2개 감지')
+            print("".join(sql_tokens[:step_length]))
             return "".join(sql_tokens[:step_length])
-#  self example 형식  # prompt_dict1 = {
-                    #     "input": prompt,
-                    #     "db_id": db_id,
-                    #     "target": gt_sql
-                    # }
+    # SELECT product_name, price FROM products ORDER BY price DESC;
 
-            # if self.example['output'].startswith(state.blocks_state):
-            #     return [('done',100.0)]
-            # else:
-            #     return [('done',99.99)]
 
-            # sql_completions = []
-            # for key in output.keys():
-            #     key = is_valid_string(key)
-            #     if key:
-            #         if key not in ["done", " done", "; done", ";done"]:
-            #             sql_completions.append(self.normalize_sql(key))
-            #         else:
-            #             sql_completions.append(key)
-            #     else:
-            #         continue
     def get_actions(self, state: AgentState) -> list[AgentAction]:
         if state.step_idx == self.prompt['deapth_limit']-1:
             if self.example['target'].startswith(state.blocks_state):
