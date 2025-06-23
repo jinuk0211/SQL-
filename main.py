@@ -7,9 +7,11 @@ import copy
 import random
 import numpy as np
 from ordered_set import OrderedSet
-
+from base import AgentWorldModel, AgentConfig, Reasoner
+from mcts import MCTS
 random.seed(0)
-
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
 def dump_json(obj, fname, indent=4, mode='w', encoding="utf8", ensure_ascii=False):
     if "b" in mode:

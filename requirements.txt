@@ -1,0 +1,4 @@
+openai
+sqlparse
+requests
+tqdm

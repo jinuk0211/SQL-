@@ -1,3 +1,7 @@
+from openai import OpenAI
+import re
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
 def get_proposal(model, tokenizer, prompt, model_name ='qwen'):
     #temperature=0.7, max_tokens=2048, seed=170, max_length=2048, truncation=True,do_sample=True, max_new_tokens=1024
     if model_name =='qwen':
@@ -34,23 +38,22 @@ def get_proposal(model, tokenizer, prompt, model_name ='qwen'):
 
         return response
 
-    elif model_name == 'vllm_qwen':
+    # elif model_name == 'vllm_qwen':
 
-        sampling_params = SamplingParams(
-            temperature=0.8,
-            top_p=0.95,
-            top_k=40,
-            repetition_penalty=1.1,
-            n=1,
-            logprobs=1,
-            max_tokens=256,
-            stop=['\n\n'],
-        )
+    #     sampling_params = SamplingParams(
+    #         temperature=0.8,
+    #         top_p=0.95,
+    #         top_k=40,
+    #         repetition_penalty=1.1,
+    #         n=1,
+    #         logprobs=1,
+    #         max_tokens=256,
+    #         stop=['\n\n'],
+    #     )
 
-        output = model.generate(prompt, sampling_params, use_tqdm=False)      
-        return output
+    #     output = model.generate(prompt, sampling_params, use_tqdm=False)      
+    #     return output
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
 
 model_name = "Qwen/Qwen2.5-Coder-7B-Instruct"
 
@@ -101,15 +104,22 @@ def llm_proposal(model=None,tokenizer=None,prompt=None,model_name='qwen'):
 
         response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
         return response
+    # if model_name == 'gpt':
+        # response = openai.ChatCompletion.create(
+        #     model="gpt-3.5-turbo",
+        #     messages=[
+        #         {"role": "user", "content": prompt}
+        #     ],
+        #     temperature=0.0,
+        # )
     if model_name == 'gpt':
-        response = openai.ChatCompletion.create(
+        model.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.0,
+            temperature=0.0,            
         )
-
     # elif model_name == 'llama':
 
     #     image = Image.open(img_path)
