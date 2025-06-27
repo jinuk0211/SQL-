@@ -4,10 +4,9 @@ from typing import Dict, Any
 from langgraph.graph import END, StateGraph
 from workflow.system_state import SystemState
 
-from workflow.agents.information_retriever.information_retriever import InformationRetriever
-from workflow.agents.schema_selector.schema_selector import SchemaSelector
-from workflow.agents.candidate_generator.candidate_generator import CandidateGenerator
-from workflow.agents.unit_tester.unit_tester import UnitTester
+from workflow.agents.ir.information_retriever import InformationRetriever
+from workflow.agents.sc.schema_selector import SchemaSelector
+from workflow.agents.cg.candidate_generator import CandidateGenerator
 
 from workflow.agents.evaluation import ExecutionAccuracy
 
